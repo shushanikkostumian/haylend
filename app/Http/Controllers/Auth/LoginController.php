@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
-
+use App\Role;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\LoginMail;
 
 class LoginController extends Controller
 {
@@ -45,4 +47,42 @@ class LoginController extends Controller
         $request->session()->invalidate();
         return $this->loggedOut($request) ?: redirect('/');
     }
+
+    public function login(Request $request)
+    {
+        $this->validateLogin($request);
+
+
+        if ($this->attemptLogin($request)) {
+
+            return $this->sendLoginResponse($request);
+        }
+
+        $this->incrementLoginAttempts($request);
+
+        return $this->sendFailedLoginResponse($request);
+    }
+
+    protected function sendLoginResponse(Request $request)
+    {
+
+        if ($this->guard()->user()->role_id == Role::getUserRoleId('client')) {
+            $user = $this->guard()->user();
+            Mail::to($user['email'])->send(new LoginMail($user));
+            $this->guard()->logout();
+
+        } else {
+
+            $request->session()->regenerate();
+
+            $this->clearLoginAttempts($request);
+
+
+            return $this->authenticated($request, $this->guard()->user())
+                ?: redirect()->intended($this->redirectPath());
+        }
+    }
+
+
+
 }
