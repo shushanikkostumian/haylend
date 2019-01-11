@@ -29,7 +29,9 @@ class LoginController extends Controller
      *
      * @var string
      */
-    protected $redirectTo = '/dashboard/home';
+    protected $redirectToAdminDashboard = '/dashboard/admin';
+    protected $redirectToBankDashboard = '/dashboard/bank';
+    protected $redirectToClientDashboard = '/dashboard/client';
 
     /**
      * Create a new controller instance.
@@ -71,15 +73,22 @@ class LoginController extends Controller
             Mail::to($user['email'])->send(new LoginMail($user));
             $this->guard()->logout();
 
-        } else {
-
+        } elseif ($this->guard()->user()->role_id == Role::getUserRoleId('bank')) {
             $request->session()->regenerate();
 
             $this->clearLoginAttempts($request);
 
 
             return $this->authenticated($request, $this->guard()->user())
-                ?: redirect()->intended($this->redirectPath());
+                ?: redirect()->intended($this->redirectToBankDashboard);
+        } else {
+
+            $request->session()->regenerate();
+
+            $this->clearLoginAttempts($request);
+
+            return $this->authenticated($request, $this->guard()->user())
+                ?: redirect()->intended($this->redirectToAdminDashboard);
         }
     }
 
